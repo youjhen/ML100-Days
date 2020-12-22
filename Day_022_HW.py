@@ -2,12 +2,18 @@
 1.下列A~E五個程式區塊中，哪一塊是特徵工程?
 C
 2.對照程式區塊 B 與 C 的結果，請問那些欄位屬於"類別型欄位"? 
-(回答欄位英文名稱即可)
+(回答欄位英文名稱即可) 類型為object之欄位
 Pclass        int64
+Name         object
 Sex          object
+Age         float64
 SibSp         int64
 Parch         int64
+Ticket       object
+Fare        float64
+Cabin        object
 Embarked     object
+dtype: object
 # 3.續上題，請問哪個欄位是"目標值"?
 Survived
 """
