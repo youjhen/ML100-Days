@@ -14,7 +14,7 @@ Fare        float64
 Cabin        object
 Embarked     object
 dtype: object
-# 3.續上題，請問哪個欄位是"目標值"?
+3.續上題，請問哪個欄位是"目標值"?
 Survived
 """
 
