@@ -58,18 +58,10 @@ display( Missing_Counts(data) )
 data['Fare'].fillna( data.Fare.median(), inplace=True )
 #登船港口(Embarked) : 計算 Embarked 欄位中每個相異值的次數,填補次數最多的港口 'S'
 display( data['Embarked'].value_counts() )
-df_data['Embarked'].fillna( 'S', inplace=True )
+data['Embarked'].fillna( 'S', inplace=True )
 #船艙號碼(Cabin) :取出 Cabin 中的第一個字母，如果為缺漏值，則以 NoCabin 表示
 data['Cabin'].apply( lambda x:str(x)[0] if not pd.isnull(x) else 'NoCabin' )
 data['Cabin'].unique()
-
-#獨熱編碼(OneHot Encoding)
-OneHot_Embarked = pd.get_dummies( data.Embarked, prefix='Embarked' )
-#合併 Embarked 編碼後的欄位
-pd.concat([data, OneHot_Embarked], axis=1).drop( 'Embarked', axis=1, inplace=True )
-#標籤編碼(Label Encoding)
-Sex_mapping = { 'male':'0', 'female':'1' }
-data.Sex.map(Sex_mapping)
 
 # Method 1: split()
 data['Title'] = data.Name.str.split(', ', expand=True)[1]
@@ -156,7 +148,55 @@ df
 
 #線性回歸模型跟邏輯回歸模型
 from sklearn.linear_model import LinearRegression, LogisticRegression
-alg = LinearRegression()
-x = train[['Pclass', 'Sex', 'Age', 'Embarked']]
-y = train['Survived']
-alg.fit(x, y)
+from sklearn.feature_selection import RFE,RFECV
+from sklearn.metrics import classification_report, confusion_matrix
+
+TravelAlone=pd.DataFrame(np.where((train["SibSp"]+train["Parch"])>0, 0, 1))
+#獨熱編碼(OneHot Encoding)
+OneHot_Pclass= pd.get_dummies( train.Pclass, prefix='Pclass' )
+#標籤編碼(Label Encoding)
+Sex_mapping = { 'male':'0', 'female':'1' }
+Label_Sex = train.Sex.map(Sex_mapping)
+
+train['Age'].fillna(train['Age'].median(skipna=True), inplace=True)
+train['Embarked'].fillna('S', inplace=True)
+x = pd.get_dummies(train, columns=['Pclass','Embarked','Sex'])
+cols = ['Age','Fare','Pclass_1','Pclass_2','Embarked_C','Embarked_S','Sex_male'] 
+X = x[cols]
+Y = train['Survived']
+
+# Build a logreg and compute the feature importances
+model = LogisticRegression(solver='liblinear', random_state=0).fit(X, Y)
+model.intercept_
+model.coef_
+model.predict_proba(X)
+model.predict(X)
+model.score(X, Y)#(466+242)/891=0.7946127946127947
+model
+cm=confusion_matrix(Y, model.predict(X))
+fig, ax = plt.subplots(figsize=(8, 8))
+ax.imshow(cm)
+ax.grid(False)
+ax.xaxis.set(ticks=(0, 1), ticklabels=('Predicted 0s', 'Predicted 1s'))
+ax.yaxis.set(ticks=(0, 1), ticklabels=('Actual 0s', 'Actual 1s'))
+ax.set_ylim(1.5, -0.5)
+for i in range(2):
+    for j in range(2):
+        ax.text(j, i, cm[i, j], ha='center', va='center', color='red')
+plt.show()
+# Create the RFE object and compute a cross-validated score.
+# The "accuracy" scoring is proportional to the number of correct classifications
+rfecv = RFECV(estimator=model, step=1, cv=10, scoring='accuracy').fit(X, Y)
+# Plot number of features VS. cross-validation scores
+plt.figure(figsize=(10,6))
+plt.xlabel("Number of features selected")
+plt.ylabel("Cross validation score (nb of correct classifications)")
+plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_)
+
+import statsmodels.api as sm
+
+logit_model = sm.Logit(Y, train['Age']).fit()
+logit_model.summary()
+
+linear_model =sm.OLS(Y, train['Age']).fit()
+linear_model.summary()
