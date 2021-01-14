@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns # 另一個繪圖-樣式套件
 
 # 忽略警告訊息
-%matplotlib inline
 plt.style.use('ggplot')
 import warnings
 warnings.filterwarnings('ignore')
@@ -147,13 +146,9 @@ df.sort_values(by ='Confidence', ascending = False, inplace = True)
 df
 
 #線性回歸模型跟邏輯回歸模型
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.feature_selection import RFE,RFECV
-from sklearn.metrics import classification_report, confusion_matrix
-
 TravelAlone=pd.DataFrame(np.where((train["SibSp"]+train["Parch"])>0, 0, 1))
 #獨熱編碼(OneHot Encoding)
-OneHot_Pclass= pd.get_dummies( train.Pclass, prefix='Pclass' )
+OneHot_Pclass= pd.get_dummies(train.Pclass, prefix='Pclass' )
 #標籤編碼(Label Encoding)
 Sex_mapping = { 'male':'0', 'female':'1' }
 Label_Sex = train.Sex.map(Sex_mapping)
@@ -165,7 +160,10 @@ cols = ['Age','Fare','Pclass_1','Pclass_2','Embarked_C','Embarked_S','Sex_male']
 X = x[cols]
 Y = train['Survived']
 
-# Build a logreg and compute the feature importances
+'''
+Build a logreg and compute the feature importances
+P(yi=0)=1-
+'''
 model = LogisticRegression(solver='liblinear', random_state=0).fit(X, Y)
 model.intercept_
 model.coef_
@@ -173,6 +171,8 @@ model.predict_proba(X)
 model.predict(X)
 model.score(X, Y)#(466+242)/891=0.7946127946127947
 model
+
+from sklearn.metrics import classification_report, confusion_matrix
 cm=confusion_matrix(Y, model.predict(X))
 fig, ax = plt.subplots(figsize=(8, 8))
 ax.imshow(cm)
@@ -186,6 +186,7 @@ for i in range(2):
 plt.show()
 # Create the RFE object and compute a cross-validated score.
 # The "accuracy" scoring is proportional to the number of correct classifications
+from sklearn.feature_selection import RFE,RFECV
 rfecv = RFECV(estimator=model, step=1, cv=10, scoring='accuracy').fit(X, Y)
 # Plot number of features VS. cross-validation scores
 plt.figure(figsize=(10,6))
@@ -195,8 +196,94 @@ plt.plot(range(1, len(rfecv.grid_scores_) + 1), rfecv.grid_scores_)
 
 import statsmodels.api as sm
 
-logit_model = sm.Logit(Y, train['Age']).fit()
+logit_model = sm.Logit(Y, X[['Embarked_C','Embarked_S']]).fit()
 logit_model.summary()
 
-linear_model =sm.OLS(Y, train['Age']).fit()
+linear_model =sm.OLS(Y, X[['Age','Fare']]).fit()
 linear_model.summary()
+
+'''
+決策樹分類器
+tree.DecisionTreeClassifier：分類樹
+tree.DecisionTreeRegressor：回歸樹
+tree.export_graphviz：將生成的決策樹導出為DOT格式，畫圖專用
+tree.ExtraTreeClassifier：高隨機版本的分類樹
+tree.ExtraTreeRegressor：高隨機版本的回歸樹
+'''
+train['Sex'].replace(['female','male'],[0,1], inplace=True)
+train['Sex']=train['Sex'].astype('str')
+train['Pclass']=train['Pclass'].astype('str')
+train['Age'].fillna(train['Age'].median(skipna=True), inplace=True)
+Features=train[['Pclass','Age','Sex']]
+Ans=train['Survived']
+
+from sklearn.model_selection import train_test_split
+x_train,x_test,y_train,y_test = train_test_split(Features,Ans,test_size=0.1)
+
+from sklearn.tree import DecisionTreeClassifier
+clf = DecisionTreeClassifier()
+clf.fit(x_train, y_train)
+y_predict=clf.predict(x_test)
+
+from sklearn.metrics import accuracy_score
+accuracy_score(clf.predict(x_test),y_test)
+print(classification_report(y_test,y_predict,target_names=['died','survived']))
+
+import graphviz
+from sklearn.tree import export_graphviz
+os.environ["PATH"] += os.pathsep + 'C:/Users/tuser.LAPTOP-QMJF8JVH/anaconda3/Lib/site-packages/graphviz/'
+g=export_graphviz(clf, feature_names=['Pclass','Age','Sex'], class_names='survived', filled= True)
+graphviz.Source(g)
+
+'''
+隨機森林參數：
+n_estimators: 樹的數量(default=10)。
+min_samples_leaf: 最終葉節點最少樣本數(default=1)；
+                  當樣本不大時，可不設定使用預設，若樣本數量非常大時，則推薦增加此參數值。
+min_samples_split:節點再劃分時所需的最小樣本數(default=2)；
+                  當樣本不大時，可不設定使用預設，若樣本數量非常大時，則推薦增加此參數值。
+oob_score: 是否採用袋外樣本(out-of-bag samples)來評估模型的準確度(default=False)。
+'''
+from sklearn.ensemble import RandomForestClassifier
+rfc = RandomForestClassifier( n_estimators = 1000,
+                              min_samples_split = 20,
+                              min_samples_leaf = 1,
+                              oob_score = True,
+                              random_state = 1,
+                              n_jobs = -1 )
+
+rfc.fit(x_train, y_train)
+rfc.oob_score_
+
+from sklearn import svm,AdaBoostClassifier
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from xgboost.sklearn import XGBClassifier
+from sklearn.model_selection import cross_val_score
+# 支援向量機
+svc = svm.SVC()
+# 貝葉斯
+nb = MultinomialNB()
+# K鄰近
+knn = KNeighborsClassifier()
+# AdaBoost
+boost = AdaBoostClassifier()
+# xgboost
+xgboost = XGBClassifier(objective='binary:logistic')
+print('SVM acc is', np.mean(cross_val_score(svc, x_train, y_train, cv=10)))
+print('NaiveBayes acc is', np.mean(cross_val_score(nb, x_train, y_train, cv=10)))
+print('KNN acc is', np.mean(cross_val_score(knn, x_train, y_train, cv=10)))
+print('AdaBoost acc is', np.mean(cross_val_score(boost, x_train, y_train, cv=10)))
+
+print('xgboost acc is', np.mean(cross_val_score(xgboost, x_train, y_train, cv=10)))
+# ValueError: DataFrame.dtypes for data must be int, float, bool or categorical.
+
+from xgboost import plot_tree
+import matplotlib.pyplot as plt
+
+xgb = XGBClassifier()
+xgb.fit(x_train, y_train)
+
+plot_tree(xgb)
+plt.show()
