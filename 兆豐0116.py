@@ -441,9 +441,9 @@ from sklearn.ensemble import AdaBoostClassifier
 boost = AdaBoostClassifier()
 acc_boost=np.mean(cross_val_score(boost, x_train, y_train, cv=10))
 
-# xgboos：xgboost acc is nan
+# xgboos：xgboost acc is
 from xgboost.sklearn import XGBClassifier
-xgboost = XGBClassifier(objective='binary:logistic')
+xgboost = XGBClassifier()
 acc_xgb=np.mean(cross_val_score(xgboost, x_train, y_train, cv=10))
 '''
 # ValueError: DataFrame.dtypes for data must be int, float, bool or categorical.
