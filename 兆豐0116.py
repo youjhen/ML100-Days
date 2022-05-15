@@ -10,9 +10,9 @@ plt.style.use('ggplot')
 import warnings
 warnings.filterwarnings('ignore')
 
-data_path = 'C:/Users/tuser.LAPTOP-QMJF8JVH/Downloads/'
-train = pd.read_csv(os.path.join(data_path, 'titanic_train.csv'))
-test = pd.read_csv(os.path.join(data_path, 'titanic_test.csv'))
+data_path = 'C:/Users/USER/Downloads/'
+train = pd.read_csv(os.path.join(data_path, 'train.csv'))
+test = pd.read_csv(os.path.join(data_path, 'test.csv'))
 data=train.append(test)
 #使用append合併之後會造成index重複問題，因此要將index重新設定
 data.reset_index(inplace=True,drop=True)
@@ -384,11 +384,22 @@ y_predict=clf.predict(x_test)
 
 from sklearn.metrics import accuracy_score
 accuracy_score(clf.predict(x_test),y_test)
+from sklearn.metrics import classification_report
 print(classification_report(y_test,y_predict,target_names=['died','survived']))
+'''
+              precision    recall  f1-score   support
+
+        died       0.78      0.84      0.81        55
+    survived       0.71      0.63      0.67        35
+
+    accuracy                           0.76        90
+   macro avg       0.74      0.73      0.74        90
+weighted avg       0.75      0.76      0.75        90
+'''
 
 import graphviz
 from sklearn.tree import export_graphviz
-os.environ["PATH"] += os.pathsep + 'C:/Users/tuser.LAPTOP-QMJF8JVH/anaconda3/Lib/site-packages/graphviz/'
+os.environ["PATH"] += os.pathsep + 'C:/Users/USER/anaconda3/Lib/site-packages/sphinx/templates/graphviz/'
 g=export_graphviz(clf, feature_names=['Pclass','Age','Sex'], class_names='survived', filled= True)
 graphviz.Source(g)
 
@@ -441,9 +452,9 @@ from sklearn.ensemble import AdaBoostClassifier
 boost = AdaBoostClassifier()
 acc_boost=np.mean(cross_val_score(boost, x_train, y_train, cv=10))
 
-# xgboos：xgboost acc is
+# xgboos：xgboost acc is nan
 from xgboost.sklearn import XGBClassifier
-xgboost = XGBClassifier()
+xgboost = XGBClassifier(objective='binary:logistic')
 acc_xgb=np.mean(cross_val_score(xgboost, x_train, y_train, cv=10))
 '''
 # ValueError: DataFrame.dtypes for data must be int, float, bool or categorical.
